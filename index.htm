@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Font Awesome (for icons) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"/>
+  <title>BirthDay Wish</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #001f3f;
+      color: #fff;
+      flex-direction: column;
+      text-align: center;
+      padding: 20px;
+      position: relative;
+    }
+    .container,
+    .countdown-container { display: none; }
+    .wish-card {
+      position: relative;
+      background: linear-gradient(45deg, #007bff, #0056b3);
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0px 0px 15px #007bff;
+      animation: fadeIn 1s ease-in-out;
+      width: 90%;
+      max-width: 400px;
+      z-index: 2;
+    }
+    h1 { font-size: 1.5em; animation: popup 1s ease-out; }
+    @keyframes popup {
+      0% { transform: translateY(200px); opacity: 0; }
+      60% { transform: translateY(-30px); opacity: 1; }
+      80% { transform: translateY(10px); }
+      100% { transform: translateY(0); }
+    }
+    p { margin-top: 10px; font-size: 1.2rem; }
+    #ageCounter { font-size: 1em; color: rgb(255, 247, 0); margin-top: 10px; text-align: center; }
+    .input-container { text-align: center; z-index: 2; }
+    input {
+      padding: 10px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      margin-top: 10px;
+      width: 180px;
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      margin-top: 10px;
+      background: #007bff;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover { background: #0056b3; }
+    /* Fullscreen canvas for sprinkle animation */
+    #sprinkleCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 100; /* behind the card */
+    }
+  </style>
+</head>
+<body>
+
+  <div class="input-container" id="inputContainer">
+    <h2>Select Your Birth Date</h2>
+    <input type="date" id="datePicker" max="">
+    <br>
+    <button onclick="checkBirthday()">Submit</button>
+  </div>
+
+  <div class="container" id="birthdayCard">
+    <div class="wish-card">
+        <h1>Happy <span id="age"></span> Birthday!🎉<br> 
+            <a href="https://www.instagram.com/nihal_meem/" target="_blank" style="color: red; text-decoration: none;">
+                <i class="fab fa-instagram"></i> Nihal Meem
+            </a>
+        </h1>
+        <p id="wishMessage">
+        Your special day has arrived🎊</p> 
+        <p style="color: rgb(255, 255, 255);">May this year bring you closer to your dreams and fill your life with growth, success, and endless possibilities.</p> 
+        <p style="color: rgb(0, 255, 4); font-size:1.3em;">Keep pushing forward and making things happen— <br>Make your Mom proud, because the best is yet to come!🌟 </p>
+       
+        <p id="ageCounter">Calculating...</p>
+    </div>
+  </div>
+  <div class="countdown-container" id="countdownContainer">
+    <div class="wish-card">
+      <h1>🎈 Your Birthday Countdown 🎈</h1>
+      <p id="countdownMessage">Loading...</p>
+    </div>
+  </div>
+  <!-- Canvas for sprinkle animation -->
+  <canvas id="sprinkleCanvas"></canvas>
+
+  <footer style="position: fixed; bottom: 10px; text-align: center; width: 100%; color: #ffcc00; font-size: 18px; font-weight: bold;">
+    Developed by <a href="https://musfiqurjahin.netlify.app/" target="_blank" 
+    style="color: #ff0000; font-size: 20px; font-weight: bold; text-decoration: none;">Jahin✨
+    </a>
+  </footer>
+  
+  <script>
+    // Set the maximum date to today
+    document.getElementById("datePicker").max = new Date().toISOString().split("T")[0];
+
+    // Helper function to add ordinal suffixes (e.g., 21st)
+    function ordinalSuffix(i) {
+      let j = i % 10,
+          k = i % 100;
+      if (j === 1 && k !== 11) return i + "st";
+      if (j === 2 && k !== 12) return i + "nd";
+      if (j === 3 && k !== 13) return i + "rd";
+      return i + "th";
+    }
+
+    function checkBirthday() {
+      let dateInput = document.getElementById("datePicker").value;
+      if (!dateInput) return alert("Please select a valid date!");
+
+      let birthDate = new Date(dateInput);
+      let today = new Date();
+
+      // Calculate current age based on the birth year
+      let currentAge = today.getFullYear() - birthDate.getFullYear();
+      if (today.getMonth() < birthDate.getMonth() ||
+          (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate())) {
+        currentAge--;
+      }
+
+      // If today is the birthday, show the birthday card
+      if (today.getDate() === birthDate.getDate() && today.getMonth() === birthDate.getMonth()) {
+        document.getElementById("age").innerText = ordinalSuffix(currentAge);
+        document.getElementById("inputContainer").style.display = "none";
+        document.getElementById("birthdayCard").style.display = "flex";
+        calculateAge(birthDate);
+        startUpDownSprinkleAnimation();
+      } else {
+        // Calculate next birthday
+        let nextBirthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+        if (nextBirthday < today) {
+          nextBirthday.setFullYear(today.getFullYear() + 1);
+        }
+        let daysRemaining = Math.ceil((nextBirthday - today) / (1000 * 60 * 60 * 24));
+        // Upcoming birthday age is always currentAge + 1 when it's not your birthday today
+        let upcomingAge = currentAge + 1;
+
+        document.getElementById("inputContainer").style.display = "none";
+        document.getElementById("countdownContainer").style.display = "flex";
+        document.getElementById("countdownMessage").innerHTML = 
+          `🎉 Only <strong>${daysRemaining}</strong> days left until your <strong>${ordinalSuffix(upcomingAge)}</strong> birthday! 🎂`;
+        startUpDownSprinkleAnimation();
+      }
+    }
+
+    function calculateAge(birthDate) {
+      function updateAge() {
+        let now = new Date();
+        let ageDiff = now - birthDate;
+
+        let years = now.getFullYear() - birthDate.getFullYear();
+        let months = now.getMonth() - birthDate.getMonth();
+        let days = now.getDate() - birthDate.getDate();
+
+        // Adjust months and days if necessary
+        if (days < 0) {
+          months--;
+          days += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+        }
+        if (months < 0) {
+          years--;
+          months += 12;
+        }
+
+        let totalMonths = years * 12 + months;
+        let totalSeconds = Math.floor(ageDiff / 1000);
+        let totalMinutes = Math.floor(totalSeconds / 60);
+        let totalHours = Math.floor(totalMinutes / 60);
+        let totalDays = Math.floor(totalHours / 24);
+
+        document.getElementById("ageCounter").innerHTML = `
+          <strong>Total years:</strong> ${years} <br>
+          <strong>Total months:</strong> ${totalMonths} <br>
+          <strong>Total days:</strong> ${totalDays} <br>
+          <strong>Total hours:</strong> ${totalHours} <br>
+          <strong>Total minutes:</strong> ${totalMinutes} <br>
+          <strong>Total seconds:</strong> ${totalSeconds}
+        `;
+      }
+      updateAge();
+      setInterval(updateAge, 1000);
+    }
+
+    // New Up-Down Sprinkle Animation:
+    // Particles (fallers) spawn from above the canvas and fall downward.
+    // When a faller reaches the explosion threshold (based on the card’s position),
+    // it “blows up” into many smaller particles that obey gravity and fade out.
+    // New fallers spawn for 5 seconds; afterward, the animation naturally stops.
+    function startUpDownSprinkleAnimation() {
+      const canvas = document.getElementById("sprinkleCanvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const fallers = [];
+      const particles = [];
+      const gravity = 0.2;
+      let spawnFallers = true;
+
+      // Determine explosion threshold based on the card’s position.
+      const card = document.querySelector('.wish-card');
+      let explosionY = canvas.height / 2; // default value
+      if (card) {
+        const rect = card.getBoundingClientRect();
+        explosionY = rect.top + rect.height / 2;
+      }
+
+      // Faller: an object falling from the top.
+      function Faller(x) {
+        this.x = x;
+        this.y = -10; // start above the canvas
+        this.vx = (Math.random() - 0.5) * 1; // slight horizontal drift
+        this.vy = Math.random() * 1 + 2; // downward speed
+      }
+      Faller.prototype.update = function() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += gravity;
+      }
+
+      // Explosion Particle: created when a faller “blows up.”
+      function Particle(x, y, vx, vy) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.life = 80 + Math.random() * 20;
+        this.alpha = 1;
+        this.radius = Math.random() * 2 + 1;
+        this.color = `hsl(${Math.floor(Math.random()*360)}, 80%, 60%)`;
+      }
+      Particle.prototype.update = function() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += gravity;
+        this.life--;
+        this.alpha = this.life / 100;
+      }
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Update and draw fallers.
+        for (let i = fallers.length - 1; i >= 0; i--) {
+          let f = fallers[i];
+          f.update();
+          ctx.beginPath();
+          ctx.arc(f.x, f.y, 2, 0, Math.PI * 2);
+          ctx.fillStyle = "#fff";
+          ctx.fill();
+
+          // When the faller reaches the threshold, trigger its explosion.
+          if (f.y >= explosionY) {
+            let numParticles = 20 + Math.floor(Math.random() * 10);
+            for (let j = 0; j < numParticles; j++) {
+              let angle = Math.random() * Math.PI * 2;
+              let speed = Math.random() * 3 + 1;
+              let vx = Math.cos(angle) * speed;
+              let vy = Math.sin(angle) * speed;
+              particles.push(new Particle(f.x, f.y, vx, vy));
+            }
+            fallers.splice(i, 1);
+          }
+        }
+
+        // Update and draw explosion particles.
+        for (let i = particles.length - 1; i >= 0; i--) {
+          let p = particles[i];
+          p.update();
+          if (p.life <= 0) {
+            particles.splice(i, 1);
+            continue;
+          }
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          // Use hsla to incorporate fading via the alpha channel.
+          ctx.fillStyle = p.color.replace('hsl', 'hsla').replace(')', `, ${p.alpha})`);
+          ctx.fill();
+        }
+
+        // Spawn new fallers if allowed.
+        if (spawnFallers && Math.random() < 0.05) { // roughly 5% chance per frame
+          let x = Math.random() * canvas.width;
+          fallers.push(new Faller(x));
+        }
+
+        // Continue the animation as long as there are active fallers/particles
+        // or if spawning is still active.
+        if (fallers.length || particles.length || spawnFallers) {
+          requestAnimationFrame(animate);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      // Stop spawning new fallers after 5 seconds.
+      setTimeout(() => {
+        spawnFallers =true;
+      }, 5000);
+
+      animate();
+
+      window.addEventListener('resize', function() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const card = document.querySelector('.wish-card');
+        if (card) {
+          const rect = card.getBoundingClientRect();
+          explosionY = rect.top + rect.height / 2;
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>
